@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.time.LocalDateTime;
 
 @Entity
@@ -19,12 +21,12 @@ public class Product {
 
     private String name;
     private String description;
-    private int price;
+    private BigDecimal price;
     private int stockQuantity;
     private LocalDateTime createdAt;
 
     @Builder
-    public Product(String name, String description, int price, int stockQuantity) {
+    public Product(String name, String description, BigDecimal price, int stockQuantity) {
         this.name = name;
         this.description = description;
         this.price = price;

@@ -21,7 +21,7 @@ public class ProductService {
     @Transactional
     public ProductResponse createProduct(ProductRequest request) {
         Product product = productRepository.save(request.toEntity());
-        return new ProductResponse(product);
+        return ProductResponse.from(product);
     }
 
     // 상품 전체 조회
@@ -29,7 +29,7 @@ public class ProductService {
     public List<ProductResponse> getAllProducts() {
         return productRepository.findAll()
                 .stream()
-                .map(ProductResponse::new)
+                .map(ProductResponse::from)
                 .collect(Collectors.toList());
     }
 
@@ -38,7 +38,7 @@ public class ProductService {
     public ProductResponse getProductById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("상품이 존재하지 않습니다. ID: " + id));
-        return new ProductResponse(product);
+        return ProductResponse.from(product);
     }
 
 }
