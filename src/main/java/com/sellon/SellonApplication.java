@@ -7,7 +7,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class SellonApplication {
 
 	public static void main(String[] args) {
-		System.out.println("hello");
 		SpringApplication.run(SellonApplication.class, args);
 	}
 
