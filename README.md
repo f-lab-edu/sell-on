@@ -46,5 +46,5 @@ SellOn은 스마트 온라인 스토어 플랫폼입니다.
 - 코드 리뷰는 한 번에 최대 5개 파일로 제한합니다.
 
 #  내용 정리
-- 자바의 금액계산: [[Java] 금액 계산 타입: BigDecima](https://velog.io/@bienlee/Java-%EA%B8%88%EC%95%A1-%EA%B3%84%EC%82%B0-%ED%83%80%EC%9E%85-BigDecimal)
-- 외부 Mapper 클래스 사용 :[[Spring] DTO와 MapStructure: 효율적인 객체 매핑 구현하기](https://velog.io/@bienlee/%EC%99%B8%EB%B6%80-Mapping-Class-MapStructure)
+- 자바의 금액계산 [[Java] 금액 계산 타입: BigDecima](https://velog.io/@bienlee/Java-%EA%B8%88%EC%95%A1-%EA%B3%84%EC%82%B0-%ED%83%80%EC%9E%85-BigDecimal)
+- 외부 Mapper 클래스 사용 [[Spring] DTO와 MapStructure: 효율적인 객체 매핑 구현하기](https://velog.io/@bienlee/%EC%99%B8%EB%B6%80-Mapping-Class-MapStructure)
