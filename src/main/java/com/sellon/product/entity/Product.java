@@ -1,13 +1,13 @@
 package com.sellon.product.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.time.LocalDateTime;
 
-@AllArgsConstructor
 @Entity
 @Table(name = "products")
 @Getter
