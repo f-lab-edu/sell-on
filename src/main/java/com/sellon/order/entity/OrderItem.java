@@ -1,9 +1,15 @@
 package com.sellon.order.entity;
 
 import com.sellon.product.entity.Product;
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.FetchType;
 import lombok.AccessLevel;
-import lombok.Builder;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -12,45 +18,26 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "order_items")
 @Getter
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OrderItem {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Product product;
 
-    private String productName; // 상품명 (주문 시점의 상품명)
-    private BigDecimal productPrice; // 상품 가격 (주문 시점의 가격)
     private int quantity; // 주문 수량
     private BigDecimal subtotal; // 소계 (가격 * 수량)
 
-    @Builder
-    public OrderItem(Product product, String productName,
-            BigDecimal productPrice, int quantity, BigDecimal subtotal
-    ) {
+    public OrderItem(Product product, int quantity) {
         this.product = product;
-        this.productName = productName;
-        this.productPrice = productPrice;
         this.quantity = quantity;
-        this.subtotal = subtotal != null ? subtotal : calculateSubTotal(productPrice, quantity);
+        this.subtotal = calculateSubTotal(product.getPrice(), quantity);
     }
 
     private BigDecimal calculateSubTotal(BigDecimal price, int quantity) {
         return price.multiply(BigDecimal.valueOf(quantity));
-    }
-
-    public void updateQuantity(int newQuantity) {
-        this.quantity = newQuantity;
-        this.subtotal = calculateSubTotal(this.productPrice, newQuantity);
-    }
-
-    public static OrderItem createFrom(Product product, int quantity) {
-        return OrderItem.builder()
-                .product(product)
-                .productName(product.getName())
-                .productPrice(product.getPrice())
-                .quantity(quantity)
-                .build();
     }
 }
