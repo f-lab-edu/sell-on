@@ -22,14 +22,4 @@ public class ProductRequest {
     @NotNull(message = "재고는 필수입니다.")
     @Min(value = 0, message = "재고 수량은 0 이상이어야 합니다.")
     private Integer stockQuantity;
-
-    public Product toEntity() {
-        return Product.builder()
-                .name(name)
-                .description(description)
-                .price(price)
-                .stockQuantity(stockQuantity)
-                .build();
-
-    }
 }
