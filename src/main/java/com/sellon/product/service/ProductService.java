@@ -3,6 +3,7 @@ package com.sellon.product.service;
 import com.sellon.product.dto.ProductRequest;
 import com.sellon.product.dto.ProductResponse;
 import com.sellon.product.entity.Product;
+import com.sellon.product.mapper.ProductMapper;
 import com.sellon.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,14 +15,14 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ProductService {
-
     private final ProductRepository productRepository;
+    private final ProductMapper mapper;
 
     // 상품 등록
     @Transactional
     public ProductResponse createProduct(ProductRequest request) {
-        Product product = productRepository.save(request.toEntity());
-        return ProductResponse.from(product);
+        Product product = productRepository.save(mapper.toEntity(request));
+        return mapper.toDto(product);
     }
 
     // 상품 전체 조회
@@ -29,7 +30,7 @@ public class ProductService {
     public List<ProductResponse> getAllProducts() {
         return productRepository.findAll()
                 .stream()
-                .map(ProductResponse::from)
+                .map(mapper::toDto)
                 .collect(Collectors.toList());
     }
 
@@ -38,7 +39,7 @@ public class ProductService {
     public ProductResponse getProductById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("상품이 존재하지 않습니다. ID: " + id));
-        return ProductResponse.from(product);
+        return mapper.toDto(product);
     }
 
 }

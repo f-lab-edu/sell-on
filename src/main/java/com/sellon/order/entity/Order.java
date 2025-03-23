@@ -1,24 +1,33 @@
 package com.sellon.order.entity;
 
-import com.sellon.order.dto.OrderItemRequest;
-import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.JoinColumn;
 import lombok.Getter;
+import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Entity
 @Table(name = "orders")
 @Getter
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Order {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String orderNumber; // 주문 번호
@@ -36,19 +45,6 @@ public class Order {
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "order_id", nullable = false)
     private List<OrderItem> orderItems = new ArrayList<>();
-
-    @Builder
-    public Order(BigDecimal shippingFee) {
-        this.orderNumber = generatedOrderNumber();
-        this.status = OrderStatus.CREATED;
-        this.orderAt = LocalDateTime.now();
-        this.totalAmount = BigDecimal.ZERO;
-        this.finalAmount = BigDecimal.ZERO;
-    }
-
-    private String generatedOrderNumber() {
-        return "ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-    }
 
     // 주문 항목 추가
     public void addOrderItem(OrderItem orderItem) {
@@ -79,22 +75,6 @@ public class Order {
     // 주문 상태 변경
     public void changeStatus(OrderStatus newStatus) {
         this.status = newStatus;
-    }
-
-    // 팩토리 메서드 - 주문 생성
-    public static Order createOrder(List<OrderItemRequest> itemRequests) {
-        Order order = Order.builder().build();
-
-        for (OrderItemRequest request : itemRequests) {
-            OrderItem orderItem = OrderItem.createFrom(
-                    request.getProduct(),
-                    request.getQuantity()
-            );
-
-            order.addOrderItem(orderItem);
-        }
-
-        return order;
     }
 
 }
