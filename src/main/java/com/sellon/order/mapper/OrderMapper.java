@@ -33,14 +33,9 @@ public class OrderMapper {
         LocalDateTime now = LocalDateTime.now();
 
         Order order = new Order(
-                null,
                 orderNumber,
                 OrderStatus.CREATED,
                 now,
-                null,
-                null,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
                 new ArrayList<>()
         );
 

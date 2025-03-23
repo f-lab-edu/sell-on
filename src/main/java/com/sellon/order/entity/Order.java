@@ -23,7 +23,6 @@ import java.util.List;
 @Entity
 @Table(name = "orders")
 @Getter
-@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Order {
     @Id
@@ -45,6 +44,15 @@ public class Order {
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "order_id", nullable = false)
     private List<OrderItem> orderItems = new ArrayList<>();
+
+    public Order(String orderNumber, OrderStatus status, LocalDateTime orderAt, List<OrderItem> orderItems) {
+        this.orderNumber = orderNumber;
+        this.status = status;
+        this.orderAt = orderAt;
+        this.orderItems = orderItems;
+        calculateTotalAmount();
+        this.finalAmount = this.totalAmount;
+    }
 
     // 주문 항목 추가
     public void addOrderItem(OrderItem orderItem) {
