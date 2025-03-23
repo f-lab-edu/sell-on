@@ -1,8 +1,5 @@
 package com.sellon.product.dto;
 
-
-import java.math.BigDecimal;
-
 import lombok.Getter;
 
 import java.math.BigDecimal;
