@@ -5,6 +5,8 @@ import com.sellon.order.dto.OrderRequest;
 import com.sellon.order.dto.OrderResponse;
 import com.sellon.order.entity.Order;
 import com.sellon.order.entity.OrderStatus;
+import com.sellon.order.exception.InvalidOrderRequestException;
+import com.sellon.order.exception.InvalidOrderNumberException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -19,42 +21,30 @@ import java.util.stream.Collectors;
 public class OrderMapper {
     private final OrderItemMapper orderItemMapper;
 
-    /**
-     * OrderRequest -> Order
-     * - 새로운 주문 시 사용
-     * @param orderRequest
-     * @return
-     */
     public Order toEntity(OrderRequest orderRequest, String orderNumber) {
         if (orderRequest == null) {
-            return null;
+            throw new InvalidOrderRequestException("주문 요청 정보(OrderRequest)가 없습니다.");
+        }
+
+        if (orderNumber == null || orderNumber.isBlank()) {
+            throw new InvalidOrderNumberException("주문 번호(OrderNumber)가 유효하지 않습니다.");
         }
 
         LocalDateTime now = LocalDateTime.now();
 
         Order order = new Order(
-                null,
                 orderNumber,
                 OrderStatus.CREATED,
                 now,
-                null,
-                null,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
                 new ArrayList<>()
         );
 
         return order;
     }
 
-    /**
-     * Order -> OrderResponse
-     * @param order
-     * @return
-     */
     public OrderResponse toDto(Order order) {
         if (order == null) {
-            return null;
+            throw new InvalidOrderRequestException("주문 정보(Order)가 존재하지 않습니다.");
         }
 
         List<OrderItemResponse> orderItemResponses = order.getOrderItems().stream()
