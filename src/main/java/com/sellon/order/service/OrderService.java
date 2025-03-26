@@ -1,6 +1,6 @@
 package com.sellon.order.service;
 
-import com.sellon.order.dto.OrderItemResponse;
+import com.sellon.order.dto.OrderItemRequest;
 import com.sellon.order.dto.OrderRequest;
 import com.sellon.order.entity.Order;
 import com.sellon.order.entity.OrderItem;
@@ -23,22 +23,36 @@ public class OrderService {
     private final OrderItemMapper orderItemMapper;
 
     public Order createOrder(OrderRequest orderRequest) {
+        validateOrderRequest(orderRequest);
         String orderNumber = generatedOrderNumber();
-
         Order order = orderMapper.toEntity(orderRequest, orderNumber);
 
-        if (orderRequest.getOrderItems() != null && !orderRequest.getOrderItems().isEmpty()) {
-            orderRequest.getOrderItems().forEach(orderItemRequest -> {
-                Product product = productRepository.findById(orderItemRequest.getProductId())
-                        .orElseThrow(() -> new IllegalArgumentException("상품을 찾울 수 없습니다."));
-
-                OrderItem orderItem = orderItemMapper.toEntity(orderItemRequest, product);
-
-                order.addOrderItem(orderItem);
-            });
-        }
+        addOrderItems(order, orderRequest);
 
         return orderRepository.save(order);
+    }
+
+    private void validateOrderRequest(OrderRequest orderRequest) {
+        if (orderRequest == null) {
+            throw new IllegalArgumentException("주문 요청이 비어 있습니다.");
+        }
+
+        if (orderRequest.getOrderItems() == null || orderRequest.getOrderItems().isEmpty()) {
+            throw new IllegalArgumentException("주문 항목이 비어 있습니다.");
+        }
+    }
+
+    private void addOrderItems(Order order, OrderRequest orderRequest) {
+        for (OrderItemRequest orderItemRequest : orderRequest.getOrderItems()) {
+            Product product = findProductById(orderItemRequest);
+            OrderItem orderItem = orderItemMapper.toEntity(orderItemRequest, product);
+            order.addOrderItem(orderItem);
+        }
+    }
+
+    private Product findProductById(OrderItemRequest orderItemRequest) {
+        return productRepository.findById(orderItemRequest.getProductId())
+                .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
     }
 
     private String generatedOrderNumber() {
