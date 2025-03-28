@@ -31,4 +31,18 @@ public class PaymentLog {
     private LocalDateTime loggedAt;
     private String description;
 
+    public static PaymentLog create(
+            Payment payment,
+            PaymentStatus previousStatus,
+            PaymentStatus currentStatus
+    ) {
+        PaymentLog log = new PaymentLog();
+        log.payment = payment;
+        log.previousStatus = previousStatus;
+        log.currentStatus = currentStatus;
+        log.loggedAt = LocalDateTime.now();
+        log.description = "결제 상태 변경";
+        return log;
+    }
+
 }
