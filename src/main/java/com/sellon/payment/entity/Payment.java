@@ -1,5 +1,6 @@
 package com.sellon.payment.entity;
 
+import com.sellon.payment.exception.PaymentProcessingException;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -33,8 +34,47 @@ public class Payment {
 
     private LocalDateTime paymentDate;
     private LocalDateTime canceledDate;
+    private String failReason;
 
     // 외부 결제 시스템 연동 정보
     private String externalPaymentKey;
+
+    public Payment(
+            String transactionId,
+            BigDecimal amount,
+            PaymentMethod paymentMethod,
+            PaymentStatus paymentStatus
+    ) {
+        this.transactionId = transactionId;
+        this.amount = amount;
+        this.paymentMethod = paymentMethod;
+        this.paymentStatus = paymentStatus;
+        this.paymentDate = LocalDateTime.now();
+    }
+
+    public void complete(LocalDateTime completionTime) {
+        if (this.paymentStatus != PaymentStatus.PROCESSING) {
+            throw new PaymentProcessingException("대기 중인 결제만 완료 처리 가능합니다.");
+        }
+        this.paymentStatus = PaymentStatus.COMPLETED;
+        this.paymentDate = completionTime;
+    }
+
+    public void fail(String reason) {
+        if (this.paymentStatus == PaymentStatus.COMPLETED || this.paymentStatus == PaymentStatus.CANCELED) {
+            throw new IllegalStateException("완료되거나 취소된 결제는 실패로 변경할 수 없습니다.");
+        }
+        this.paymentStatus = PaymentStatus.FAILED;
+        this.failReason = reason;
+    }
+
+    public void cancel(LocalDateTime cancellationTime) {
+        this.paymentStatus = PaymentStatus.CANCELED;
+        this.canceledDate = cancellationTime;
+    }
+
+    public void setExternalPaymentKey(String externalPaymentKey) {
+        this.externalPaymentKey = externalPaymentKey;
+    }
 
 }
