@@ -1,12 +1,18 @@
 package com.sellon.payment.entity;
 
+import com.sellon.order.entity.Order;
 import com.sellon.payment.exception.PaymentProcessingException;
+import jakarta.persistence.DiscriminatorColumn;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,6 +23,8 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "payments")
 @Getter
+@Inheritance(strategy = InheritanceType.JOINED)
+@DiscriminatorColumn(name = "payment_type")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Payment {
     @Id
@@ -25,6 +33,10 @@ public class Payment {
 
     private String transactionId;
     private BigDecimal amount;
+
+    @ManyToOne
+    @JoinColumn(name = "order_id")
+    private Order order;
 
     @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod; // 결제 수단
@@ -42,6 +54,7 @@ public class Payment {
     public Payment(
             String transactionId,
             BigDecimal amount,
+            Order order,
             PaymentMethod paymentMethod,
             PaymentStatus paymentStatus
     ) {
@@ -53,7 +66,7 @@ public class Payment {
     }
 
     public void complete(LocalDateTime completionTime) {
-        if (this.paymentStatus != PaymentStatus.PROCESSING) {
+        if (this.paymentStatus != PaymentStatus.PENDING) {
             throw new PaymentProcessingException("대기 중인 결제만 완료 처리 가능합니다.");
         }
         this.paymentStatus = PaymentStatus.COMPLETED;
