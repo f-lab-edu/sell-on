@@ -1,135 +1,74 @@
 package com.sellon.payment.service;
 
-import com.sellon.order.entity.Order;
-import com.sellon.order.exception.OrderNotFoundException;
-import com.sellon.order.repository.OrderRepository;
-import com.sellon.payment.dto.examplePG.Card;
-import com.sellon.payment.dto.examplePG.DepositConfirmDto;
-import com.sellon.payment.dto.examplePG.ExamplePgRequest;
-import com.sellon.payment.dto.examplePG.ExamplePgResponse;
-import com.sellon.payment.dto.examplePG.VirtualAccount;
-import com.sellon.payment.entity.*;
-import com.sellon.payment.exception.PaymentFailedException;
-import com.sellon.payment.exception.PaymentNotFoundException;
+import com.sellon.payment.dto.PaymentResult;
+import com.sellon.payment.entity.Payment;
+import com.sellon.payment.entity.PaymentMethod;
+import com.sellon.payment.entity.PaymentStatus;
 import com.sellon.payment.exception.PaymentProcessingException;
-import com.sellon.payment.mapper.ExamplePaymentMapper;
-import com.sellon.payment.repository.PaymentLogRepository;
 import com.sellon.payment.repository.PaymentRepository;
+import java.sql.SQLException;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PaymentService {
-    private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
-    private final PaymentLogRepository paymentLogRepository;
-    private final ExamplePaymentMapper mapper;
-    private final PaymentGatewayClient paymentGatewayClient;
 
-    /**
-     * 카드 결제 처리
-     */
-    @Transactional
-    public Payment processCardPayment(ExamplePgRequest request) {
-        ExamplePgResponse<Card> response = paymentGatewayClient.requestCardPayment(request);
+    // 결제 트랜잭션 ID별 락 객체를 관리하는 맵
+    private final Map<String, Object> paymentLocks = new ConcurrentHashMap<>();
 
-        if (response.isSuccess()) {
-            Order order = orderRepository.findByOrderNumber(request.getOrderNumber())
-                .orElseThrow(() -> new OrderNotFoundException("주문을 찾을 수 없습니다."));
+    // 결제 처리 메서드
+    public PaymentResult processPayment(Payment payment, PaymentMethod method) {
+        // 결제 ID에 해당하는 락 객체 가져오기 (없으면 생성)
+        Object lock = paymentLocks.computeIfAbsent(payment.getTransactionId(), k -> new Object());
 
-            CardPayment payment = mapper.toCardPayment(response, order);
+        // synchronized 블록으로 임계영역 설정
+        synchronized (lock) {
+            try {
+                // 상태체크: 작업 가능한 상태인지 확인
+                if (!isValidStateForProcessing(payment.getPaymentStatus())) {
+                    throw new PaymentProcessingException("결제 상태가 작업을 허용하지 않습니다.");
+                }
 
-            return confirmDeposit(payment);
-        } else {
-            throw new PaymentFailedException("카드 결제 처리 실패");
-        }
-    }
+                // 결제 수단별 작업 수행
+                method.process(payment);
 
-    /**
-     * 가상계좌 정산 발급
-     */
-    @Transactional
-    public VirtualAccountPayment processVirtualAccountPayment(ExamplePgRequest request) {
-        ExamplePgResponse<VirtualAccount> response = paymentGatewayClient.issueVirtualAccount(request);
+                // 예외가 없으면 성공으로 간주
+                updatePaymentStatus(payment, PaymentStatus.COMPLETED);
+                return PaymentResult.success("결제 성공");
 
-        if (response.isSuccess()) {
-            Order order = orderRepository.findByOrderNumber(request.getOrderNumber())
-                .orElseThrow(() -> new PaymentNotFoundException("Order not found"));
-
-            VirtualAccountPayment payment = mapper.toVirtualAccount(response, order);
-
-            return paymentRepository.save(payment);
-        } else {
-            throw new PaymentFailedException("가상계좌 발급 실패");
-        }
-    }
-
-    /**
-     * 무통장 정산 발급
-     */
-    @Transactional
-    public BankTransferPayment processBankTransferPayment(Order order) {
-        String transactionId = generateUniqueTransactionId();
-
-        BankTransferPayment payment = new BankTransferPayment(
-            transactionId,
-            order.getTotalAmount(),
-            order,
-            PaymentMethod.BANK_TRANSFER,
-            PaymentStatus.PENDING
-        );
-
-        return paymentRepository.save(payment);
-    }
-
-    /**
-     * 가상계좌 입금 확인
-     */
-    @Transactional
-    public Payment receiveDepositCallback(DepositConfirmDto depositConfirmDto) {
-        String transactionId = depositConfirmDto.getTransactionId();
-
-        VirtualAccountPayment payment = paymentRepository.findByTransactionId(transactionId)
-            .map(p -> (VirtualAccountPayment) p)
-            .orElseThrow(() -> new PaymentNotFoundException("해당 계좌번호의 결제정보를 찾을 수 없습니다: " + transactionId));
-
-        if (payment.getAmount() != depositConfirmDto.getAmount()) {
-            throw new PaymentProcessingException("입금액이 결제 금액과 일치하지 않습니다.");
+            } catch (PaymentProcessingException e) {
+                // 로깅
+                log.error("결제 처리 중 오류 발생: {}", e);
+                updatePaymentStatus(payment, PaymentStatus.FAILED);
+                return PaymentResult.failed("결제 처리 중 오류 발생: " + e.getMessage());
+            } catch (SQLException e) {
+                // 디비관련 예외 발생의 경우
+                log.error("SQL 예외 발생: {}", e);
+                updatePaymentStatus(payment, PaymentStatus.FAILED);
+                return PaymentResult.failed("SQL 예외 발생: " + e.getMessage());
+            } finally {
+                paymentLocks.remove(payment.getTransactionId());
+            }
         }
 
-        return confirmDeposit(payment);
+    }
+    // 상태 체크 로직
+    private boolean isValidStateForProcessing(PaymentStatus status) {
+        // INITIALIZED 또는 PROCESSING 상태일 때만 작업 가능
+        return status == PaymentStatus.INITIALIZED || status == PaymentStatus.PROCESSING;
     }
 
-    /**
-     * 무통장 입금 확인
-     */
-    @Transactional
-    public Payment confirmByAdmin(String transactionId, String adminId) {
-        Payment payment = paymentRepository.findByTransactionId(transactionId)
-            .orElseThrow(() -> new PaymentNotFoundException("해당 트랜잭션 아이디의 결제정보를 찾을 수 없습니다: " + transactionId));
-
-        return confirmDeposit(payment);
+    private void updatePaymentStatus(Payment payment, PaymentStatus status) {
+        payment.updateStatus(status);
+        paymentRepository.save(payment);
     }
 
-    /**
-     * 입금 확인 처리
-     */
-    @Transactional
-    public Payment confirmDeposit(Payment payment) {
-        payment.complete(LocalDateTime.now());
-        PaymentLog log = PaymentLog.create(payment, PaymentStatus.PENDING, PaymentStatus.COMPLETED);
-        paymentLogRepository.save(log);
-
-        return paymentRepository.save(payment);
-    }
-
-    private String generateUniqueTransactionId() {
-        return UUID.randomUUID().toString();
-    }
 
 }
